@@ -37,7 +37,25 @@ public class TreeTraversalAgent
         extends Object
         implements Callable<Pair<MoveView, Long> >  // so this object can be run in a background thread
 	{
+        private class Node
+        {
+            private double utility;
+            private List<Node> children;
 
+            public Node(double utility) 
+            { 
+                this.utility = utility;
+                this.children = new LinkedList<>();
+            }
+
+            public double getUtility() { return this.utility; }
+            public Iterator<Node> getChildren() { return this.children.iterator(); }
+            public Node getLastChild() { return this.children.get(this.children.size() - 1); }
+
+            public void setUtility(double utility) { this.utility = utility; }
+            public void addChild(Node newChild) { this.children.add(newChild); }
+        }
+    
         // TODO: feel free to add any fields here! If you do, you should probably modify the constructor
         // of this class and add some getters for them. If the fields you add aren't final you should add setters too!
 		private final BattleView rootView;
