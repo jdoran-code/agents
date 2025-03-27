@@ -41,16 +41,29 @@ public class TreeTraversalAgent
         {
             private double utility;
             private List<Node> children;
+            private boolean isChanceChild;
+            private double probability;
 
             public Node(double utility) 
             { 
                 this.utility = utility;
+                this.isChance = false;
+                this.children = new LinkedList<>();
+            }
+
+            public Node(double utility, double probability) 
+            { 
+                this.utility = utility;
+                this.probability = probability;
+                this.isChanceChild = true;
                 this.children = new LinkedList<>();
             }
 
             public double getUtility() { return this.utility; }
+            public double getProbability() { returh this.probability; }
             public Iterator<Node> getChildren() { return this.children.iterator(); }
             public Node getLastChild() { return this.children.get(this.children.size() - 1); }
+            public boolean getIsChance() { return this.isChance; }
 
             public void setUtility(double utility) { this.utility = utility; }
             public void addChild(Node newChild) { this.children.add(newChild); }
