@@ -122,6 +122,14 @@ public class TreeTraversalAgent
         private int myMoveOppIdx;
         private int myTeamStartHP;
         private int oppTeamStartHP;
+        private double alpha;
+        private double beta;
+        private double gamma;
+        private double delta;
+        private double epsilon;
+        private double zeta;
+        private double eta;
+
 
         // If you change the parameters of the constructor, you will also have to change
         // the getMove(...) method of TreeTraversalAgent!
@@ -141,11 +149,25 @@ public class TreeTraversalAgent
         public int getMyMoveOppIdx() { return this.myMoveOppIdx; }
         public int getMyTeamStartHP() { return this.myTeamStartHP; }
         public int getOppTeamStartHP() { return this.oppTeamStartHP; }
+        public double getAlpha() { return this.alpha; }
+        public double getBeta() { return this.beta; }
+        public double getGamma() { return this.gamma; }
+        public double getDelta() { return this.delta; }
+        public double getEpsilon() { return this.epsilon; }
+        public double getZeta() { return this.zeta; }
+        public double getEta() { return this.eta; }
 
         public void setMyTeamGoesFirst(boolean status) { this.myTeamGoesFirst = status; }
         public void setMyMoveOppIdx(int idx) { this.myMoveOppIdx = idx; }
         public void setMyTeamStartHP(int hp) { this.myTeamStartHP = hp; }
         public void setOppTeamStartHP(int hp) { this.oppTeamStartHP = hp; }
+        public void setAlpha(double alpha) { this.alpha = alpha; }
+        public void setBeta(double beta) { this.beta = beta; }
+        public void setGamma(double gamma) { this.gamma = gamma; }
+        public void setDelta(double delta) { this.delta = delta; }
+        public void setEpsilon(double epsilon) { this.epsilon = epsilon; }
+        public void setZeta(double zeta) { this.zeta = zeta; }
+        public void setEta(double eta) { this.eta = eta; }
 
 		/**
 		 * TODO: implement me!
@@ -184,10 +206,12 @@ public class TreeTraversalAgent
                    Iterator<MoveView> myMovesIter = myPokemon.getAvailableMoves().iterator();
                    bestMove = null;
                    bestUtility = Double.NEGATIVE_INFINITY;
+                   this.setAlpha(bestUtility);
                    while (myMovesIter.hasNext())
                    {
                     MoveViewSpecial currentMove = new MoveViewSpecial(myMovesIter.next());
                     if (currentMove.getMove().getName().equals("Scratch") || currentMove.getMove().getName().equals("Growl")) continue;
+                    if (currentMove.getMove().getName().equals("Pin Missile") || currentMove.getMove().getName().equals("Twinneedle")) continue;
                     Node currentNode = new Node(currentMove);
                     root.addChild(currentNode);
                     double currentUtility = treeSearchRecurse(rootView, root.getLastChild(), 1).getUtility();
@@ -195,6 +219,7 @@ public class TreeTraversalAgent
                     {
                         bestUtility = currentUtility;
                         bestMove = currentMove;
+                        this.setAlpha(bestUtility);
                     }
                    }
                    
@@ -206,9 +231,11 @@ public class TreeTraversalAgent
                    Iterator<MoveView> oppMovesIter = oppPokemon.getAvailableMoves().iterator();
                    bestMove = null;
                    bestUtility = Double.POSITIVE_INFINITY;
+                   this.setBeta(bestUtility);
                    while (oppMovesIter.hasNext())
                    {
                     MoveViewSpecial currentMove = new MoveViewSpecial(oppMovesIter.next());
+                    if (currentMove.getMove().getName().equals("Double Slap")) continue;
                     Node currentNode = new Node(root.getMyMove(), currentMove);
                     root.addChild(currentNode);
                     double currentUtility = treeSearchRecurse(rootView, root.getLastChild(), 2).getUtility();
@@ -216,7 +243,9 @@ public class TreeTraversalAgent
                     {
                         bestUtility = currentUtility;
                         bestMove = currentMove;
+                        this.setBeta(bestUtility);
                     }
+                    if (bestUtility < this.getAlpha()) break;
                    }
                    
                    bestMove.setUtility(bestUtility);
@@ -236,21 +265,25 @@ public class TreeTraversalAgent
                     if (myMove.getMove().getPriority() > oppMove.getMove().getPriority())
                     {
                         this.setMyTeamGoesFirst(true);
+                        this.setGamma(this.getBeta());
                         nextStage = 3;
                     }
                     else if (myMove.getMove().getPriority() < oppMove.getMove().getPriority())
                     {
                         this.setMyTeamGoesFirst(false);
+                        this.setEta(this.getBeta());
                         nextStage = 7;
                     }
                     else if (mySpeed > oppSpeed)
                     {
                         this.setMyTeamGoesFirst(true);
+                        this.setGamma(this.getBeta());
                         nextStage = 3;
                     }
                     else if (oppSpeed > mySpeed)
                     {
                         this.setMyTeamGoesFirst(true);
+                        this.setEta(this.getBeta());
                         nextStage = 7;
                     }
 
@@ -263,12 +296,20 @@ public class TreeTraversalAgent
                     else
                     {
                         this.setMyTeamGoesFirst(true);
+                        this.setGamma(this.getBeta());
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
                         utility = treeSearchRecurse(rootView, root.getLastChild(), 3).getUtility() 
                             * root.getLastChild().getProbability();
                         
+                        if (utility > this.getBeta())
+                        {
+                            myMove.setUtility(utility);
+                            return myMove;
+                        }
+                        
                         this.setMyTeamGoesFirst(false);
+                        this.setEta((this.getBeta() - utility) / 0.5);
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
                         utility += treeSearchRecurse(rootView, root.getLastChild(), 7).getUtility() 
@@ -295,17 +336,27 @@ public class TreeTraversalAgent
 
                     if (myPokemon.getNonVolatileStatus() == NonVolatileStatus.PARALYSIS)
                     {
-                        childNode = new Node(myMove, oppMove, 0.25);
-                        root.addChild(childNode);
-                        utility = (treeSearchRecurse(rootView, root.getLastChild(), loseTurnNextStage).getUtility() 
-                            * root.getLastChild().getProbability());
+                        this.setDelta(this.getGamma());
                         childNode = new Node(myMove, oppMove, 0.75);
                         root.addChild(childNode);
-                        utility += (treeSearchRecurse(rootView, root.getLastChild(), 4).getUtility() 
+                        utility = (treeSearchRecurse(rootView, root.getLastChild(), 4).getUtility() 
+                            * root.getLastChild().getProbability());
+                        
+                        if (utility > this.getGamma())
+                        {
+                           myMove.setUtility(utility);
+                           return myMove; 
+                        }
+
+                        if (this.getMyTeamGoesFirst()) this.setEta((this.getGamma() - utility) / 0.25);
+                        childNode = new Node(myMove, oppMove, 0.25);
+                        root.addChild(childNode);
+                        utility += (treeSearchRecurse(rootView, root.getLastChild(), loseTurnNextStage).getUtility() 
                             * root.getLastChild().getProbability()); 
                     }
                     else
                     {
+                        this.setDelta(this.getGamma());
                         childNode = new Node(myMove, oppMove);
                         root.addChild(childNode);
                         utility = treeSearchRecurse(rootView, root.getLastChild(), 4).getUtility();
@@ -331,6 +382,7 @@ public class TreeTraversalAgent
 
                     if (preMove.size() == 1)
                     {
+                        this.setEpsilon(this.getDelta());
                         childNode = new Node(myMove, oppMove);
                         root.addChild(childNode);
                         utility = treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), 5).getUtility();
@@ -341,6 +393,14 @@ public class TreeTraversalAgent
                         {
                             if (preMove.get(i).getFirst() == 0.098)
                             {
+                                if (i == 0)
+                                {
+                                    this.setEpsilon(this.getDelta());
+                                }
+                                else
+                                {
+                                    this.setEpsilon((this.getDelta() - utility) / 0.098);
+                                }
                                 childNode = new Node(myMove, oppMove, 0.098);
                                 root.addChild(childNode);
                                 utility += (treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), 5).getUtility()
@@ -348,10 +408,27 @@ public class TreeTraversalAgent
                             }
                             else
                             {
+                                if (this.getMyTeamGoesFirst())
+                                {
+                                    if (i == 0)
+                                    {
+                                        this.setEta(this.getDelta());
+                                    }
+                                    else
+                                    {
+                                        this.setEta((this.getDelta() - utility) / 0.902);
+                                    }
+                                }
                                 childNode = new Node(myMove, oppMove, 0.902);
                                 root.addChild(childNode);
                                 utility += (treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), loseTurnNextStage).getUtility()
                                     * root.getLastChild().getProbability());
+                            }
+
+                            if (utility > this.getDelta())
+                            {
+                                myMove.setUtility(utility);
+                                return myMove;
                             }
                         }
                     }
@@ -368,6 +445,7 @@ public class TreeTraversalAgent
                     if (!myPokemon.getFlag(Flag.CONFUSED))
                     {
                         this.setMyMoveOppIdx(getOpponentTeamView(rootView).getBattleIdx());
+                        this.setZeta(this.getEpsilon());
                         childNode = new Node(myMove, oppMove);
                         root.addChild(childNode);
                         utility = treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility();
@@ -375,10 +453,17 @@ public class TreeTraversalAgent
                     else
                     {
                         this.setMyMoveOppIdx(getOpponentTeamView(rootView).getBattleIdx());
+                        this.setZeta(this.getEpsilon());
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
                         utility = (treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility()
                             * root.getLastChild().getProbability()); 
+                        
+                        if (utility > this.getEpsilon())
+                        {
+                           myMove.setUtility(utility);
+                           return myMove; 
+                        }
                         
                         Move selfHurtMove = new Move(
                             "SelfDamage", // move name
@@ -403,6 +488,7 @@ public class TreeTraversalAgent
                         );
 
                         this.setMyMoveOppIdx(getMyTeamIdx());
+                        this.setZeta((this.getEpsilon() - utility) / 0.5);
                         myMove = new MoveViewSpecial(new MoveView(selfHurtMove));
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
@@ -431,10 +517,17 @@ public class TreeTraversalAgent
                     while (effectIter.hasNext())
                     {
                         Pair<Double, BattleView> currentPair = effectIter.next();
+                        if (this.getMyTeamGoesFirst()) this.setEta((this.getZeta() - utility) / currentPair.getFirst());
                         childNode = new Node(myMove, oppMove, currentPair.getFirst());
                         root.addChild(childNode);
                         utility += (treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility()
                             * root.getLastChild().getProbability());
+                        
+                        if (utility > getZeta())
+                        {
+                           myMove.setUtility(utility);
+                           return myMove; 
+                        }
                     }
                     
                     myMove.setUtility(utility);
@@ -458,11 +551,17 @@ public class TreeTraversalAgent
                     while (effectIter.hasNext())
                     {
                         Pair<Double, BattleView> currentPair = effectIter.next();
-                        double first = currentPair.getFirst();
+                        if (this.getMyTeamGoesFirst()) this.setEta((this.getZeta() - utility) / currentPair.getFirst());
                         childNode = new Node(myMove, oppMove, currentPair.getFirst());
                         root.addChild(childNode);
                         utility += (treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility() 
                             * root.getLastChild().getProbability());
+                        
+                        if (utility > getEta())
+                        {
+                            myMove.setUtility(utility);
+                            return myMove;
+                        }
                     }
                     
                     myMove.setUtility(utility);
