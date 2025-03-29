@@ -120,6 +120,8 @@ public class TreeTraversalAgent
         private final int myTeamIdx;
         private boolean myTeamGoesFirst;
         private int myMoveOppIdx;
+        private int myTeamStartHP;
+        private int oppTeamStartHP;
 
         // If you change the parameters of the constructor, you will also have to change
         // the getMove(...) method of TreeTraversalAgent!
@@ -137,9 +139,13 @@ public class TreeTraversalAgent
         public int getMyTeamIdx() { return this.myTeamIdx; }
         public boolean getMyTeamGoesFirst() { return this.myTeamGoesFirst; }
         public int getMyMoveOppIdx() { return this.myMoveOppIdx; }
+        public int getMyTeamStartHP() { return this.myTeamStartHP; }
+        public int getOppTeamStartHP() { return this.oppTeamStartHP; }
 
         public void setMyTeamGoesFirst(boolean status) { this.myTeamGoesFirst = status; }
         public void setMyMoveOppIdx(int idx) { this.myMoveOppIdx = idx; }
+        public void setMyTeamStartHP(int hp) { this.myTeamStartHP = hp; }
+        public void setOppTeamStartHP(int hp) { this.oppTeamStartHP = hp; }
 
 		/**
 		 * TODO: implement me!
@@ -172,6 +178,8 @@ public class TreeTraversalAgent
             {
                 // Pick max of my possible moves
                 case 0:
+                   this.setMyTeamStartHP(getMyTeamView(rootView).getActivePokemonView().getCurrentStat(Stat.HP));
+                   this.setOppTeamStartHP(getOpponentTeamView(rootView).getActivePokemonView().getCurrentStat(Stat.HP));
                    myPokemon = getMyTeamView(rootView).getActivePokemonView();
                    Iterator<MoveView> myMovesIter = myPokemon.getAvailableMoves().iterator();
                    bestMove = null;
@@ -179,6 +187,7 @@ public class TreeTraversalAgent
                    while (myMovesIter.hasNext())
                    {
                     MoveViewSpecial currentMove = new MoveViewSpecial(myMovesIter.next());
+                    if (currentMove.getMove().getName().equals("Scratch") || currentMove.getMove().getName().equals("Growl")) continue;
                     Node currentNode = new Node(currentMove);
                     root.addChild(currentNode);
                     double currentUtility = treeSearchRecurse(rootView, root.getLastChild(), 1).getUtility();
@@ -288,12 +297,12 @@ public class TreeTraversalAgent
                     {
                         childNode = new Node(myMove, oppMove, 0.25);
                         root.addChild(childNode);
-                        utility = treeSearchRecurse(rootView, root.getLastChild(), loseTurnNextStage).getUtility() 
-                            * root.getLastChild().getProbability();
+                        utility = (treeSearchRecurse(rootView, root.getLastChild(), loseTurnNextStage).getUtility() 
+                            * root.getLastChild().getProbability());
                         childNode = new Node(myMove, oppMove, 0.75);
                         root.addChild(childNode);
-                        utility += treeSearchRecurse(rootView, root.getLastChild(), 4).getUtility() 
-                            * root.getLastChild().getProbability(); 
+                        utility += (treeSearchRecurse(rootView, root.getLastChild(), 4).getUtility() 
+                            * root.getLastChild().getProbability()); 
                     }
                     else
                     {
@@ -334,15 +343,15 @@ public class TreeTraversalAgent
                             {
                                 childNode = new Node(myMove, oppMove, 0.098);
                                 root.addChild(childNode);
-                                utility += treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), 5).getUtility()
-                                    * root.getLastChild().getProbability();
+                                utility += (treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), 5).getUtility()
+                                    * root.getLastChild().getProbability());
                             }
                             else
                             {
                                 childNode = new Node(myMove, oppMove, 0.902);
                                 root.addChild(childNode);
-                                utility += treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), loseTurnNextStage).getUtility()
-                                    * root.getLastChild().getProbability();
+                                utility += (treeSearchRecurse(preMove.get(0).getSecond(), root.getLastChild(), loseTurnNextStage).getUtility()
+                                    * root.getLastChild().getProbability());
                             }
                         }
                     }
@@ -368,8 +377,8 @@ public class TreeTraversalAgent
                         this.setMyMoveOppIdx(getOpponentTeamView(rootView).getBattleIdx());
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
-                        utility = treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility()
-                            * root.getLastChild().getProbability(); 
+                        utility = (treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility()
+                            * root.getLastChild().getProbability()); 
                         
                         Move selfHurtMove = new Move(
                             "SelfDamage", // move name
@@ -397,8 +406,8 @@ public class TreeTraversalAgent
                         myMove = new MoveViewSpecial(new MoveView(selfHurtMove));
                         childNode = new Node(myMove, oppMove, 0.5);
                         root.addChild(childNode);
-                        utility += treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility()
-                            * root.getLastChild().getProbability(); 
+                        utility += (treeSearchRecurse(rootView, root.getLastChild(), 6).getUtility()
+                            * root.getLastChild().getProbability()); 
                     }
                     
                     myMove.setUtility(utility);
@@ -424,8 +433,8 @@ public class TreeTraversalAgent
                         Pair<Double, BattleView> currentPair = effectIter.next();
                         childNode = new Node(myMove, oppMove, currentPair.getFirst());
                         root.addChild(childNode);
-                        utility += treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility()
-                            * root.getLastChild().getProbability();
+                        utility += (treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility()
+                            * root.getLastChild().getProbability());
                     }
                     
                     myMove.setUtility(utility);
@@ -449,10 +458,11 @@ public class TreeTraversalAgent
                     while (effectIter.hasNext())
                     {
                         Pair<Double, BattleView> currentPair = effectIter.next();
+                        double first = currentPair.getFirst();
                         childNode = new Node(myMove, oppMove, currentPair.getFirst());
                         root.addChild(childNode);
-                        utility += treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility()
-                            * root.getLastChild().getProbability();
+                        utility += (treeSearchRecurse(currentPair.getSecond(), root.getLastChild(), nextStage).getUtility() 
+                            * root.getLastChild().getProbability());
                     }
                     
                     myMove.setUtility(utility);
@@ -460,7 +470,7 @@ public class TreeTraversalAgent
                 // Calculate HP in current battleView and use that as utility
                 default:
                     myMove = root.getMyMove();
-                    utility = getMyTeamView(rootView).getActivePokemonView().getCurrentStat(Stat.HP) - getOpponentTeamView(rootView).getActivePokemonView().getCurrentStat(Stat.HP);
+                    utility = (this.getOppTeamStartHP() - getOpponentTeamView(rootView).getActivePokemonView().getCurrentStat(Stat.HP));
                     myMove.setUtility((double) utility);
                     //System.out.println(myMove.getUtility());
                     return myMove;
@@ -487,7 +497,7 @@ public class TreeTraversalAgent
     {
         super();
         this.maxThinkingTimePerMoveInMS = 180000 * 2; // 6 min/move
-        this.maxDepth = 1000; // set this however you want
+        this.maxDepth = 1; // set this however you want
     }
 
     /**
